@@ -1,0 +1,129 @@
+Peer Review — Insertion Sort (Student A)
+Reviewer (Student B): Nuray Nuray
+Course: Design & Analysis of Algorithms
+Date: 2025-09-28
+1) Algorithm Overview (brief)
+Baseline (InsertionSort)
+Classic stable, in-place insertion sort: iterate i=1..n-1, keep key=a[i], shift all a[j] > key one position to the right and place key at j+1. Uses a small helper incCompare(t) to count comparisons.
+Optimized (InsertionSortOptimized)
+Adds three standard optimizations:
+Sentinel: move the global minimum to index 0 to avoid bounds checks in inner loop.
+Early-exit check: linear pass detects fully sorted input in O(n).
+Binary insertion + block move: find insertion position by binary search (O(log n) comparisons), shift the block with System.arraycopy (still Θ(k) moves), then place key.
+Metrics (PerformanceTracker):
+comparisons, moves (assignments), arrayAccesses, memBeforeBytes/memAfterBytes, timeNs.
+CLI supports --algo baseline|optimized, --n, --trials, --dist (random/sorted/reverse/nearly), --csv.
+The implementations are clean, null-safe (Objects.requireNonNull), and covered by unit + property tests.
+2) Asymptotic Complexity Analysis
+Time Complexity
+Let n be input size.
+Baseline Insertion Sort
+Best (Ω(n)): already sorted → one pass, n−1 successful comparisons, zero shifts.
+Average (Θ(n²)): expected shifts ~ n²/4; comparisons also ~ n²/4–n²/2 depending on model (with distinct random keys, ~n²/4 comparisons to fail the condition on average, plus loop checks).
+Worst (O(n²)): reverse order → shifts 1+2+…+(n−1)=Θ(n²), comparisons also Θ(n²).
+Optimized Insertion Sort (sentinel + binary search + block move)
+Best (Ω(n)): early-exit detects sorted input after a single linear scan.
+Average (Θ(n²)): binary search cuts comparisons per insertion to O(log n), but data movement to make room for key still costs Θ(k) per step, giving Θ(n²) total time.
+Worst (O(n²)): reverse order → each insertion shifts a block of size ≈i, so Θ(n²) moves.
+Bottom line: both baseline and optimized are Θ(n²) on average/worst, Ω(n) best; optimized reduces constant factors (fewer comparisons via binary search; faster shifts via native arraycopy), and is adaptive on already/near-sorted data thanks to early-exit.
+Operation Counts (high-level)
+Comparisons
+Baseline: worst ≈ n(n−1)/2; average ≈ ~ n²/4.
+Optimized: ~ n log n comparisons for searches + loop checks, but still overshadowed by movement cost for large n.
+Moves / Array Accesses
+Baseline: shifts sum to Θ(n²) in worst; best is 0.
+Optimized: uses System.arraycopy (still Θ(n²) worst, but implemented natively and contiguous).
+Space Complexity
+Both are Θ(1) auxiliary space (aside from the call to System.arraycopy, which is in-place). Both are stable (relative order of equal keys preserved).
+3) Code Review & Optimization Suggestions
+Strengths
+Correctness & stability: tests cover edge cases (empty, single, duplicates), reverse/sorted cases, property-based random verification, and cross-validation with Arrays.sort.
+Metrics instrumentation: clean PerformanceTracker with CSV export helpers.
+Optimizations implemented: sentinel, early-exit, binary insertion + block move—all appropriate.
+Minor Issues / Improvements
+Metrics accounting precision (baseline)
+Inside the inner while you increment arrayAccesses += 2 before the assignment and comment “read a[j], write a[j+1]”. More precise would be:
+// read a[j]
+if (t != null) t.arrayAccesses++;
+a[j + 1] = a[j];
+// write a[j+1]
+if (t != null) { t.arrayAccesses++; t.moves++; }
+Likewise, count the final a[j+1] = key as one write (arrayAccesses++) and one move.
+Comparison accounting idiom
+while (j >= 0 && (incCompare(t) && a[j] > key)) is clever, but a bit opaque. Consider making it explicit for readability:
+while (j >= 0) {
+    if (t != null) t.comparisons++;
+    if (a[j] <= key) break;
+    // shift...
+}
+Same complexity, clearer to readers and linters.
+Guard for tiny arrays
+Micro-optimization (and clarity):
+if (n < 2) return;
+(You already have it—good.)
+Nearly-sorted detection
+You already have a full early-exit for the fully sorted case. For nearly sorted, a cheaper heuristic is to track if each pass performed any shift; if no shift occurs for k consecutive passes, exit early. (Still O(n²) worst, but can help on mild disorder.)
+Binary search bounds
+Your binarySearchForInsertion(a, 0, i, key) returns the first index > key. That’s right for stable insertion (you use <= key to move right). Well done. Just add a one-line comment documenting the invariant (e.g., “returns smallest l such that a[l] > key” given the <= branch), so future readers don’t have to re-derive it.
+System.arraycopy metrics
+You count moves += len; arrayAccesses += 2*len; That’s a reasonable model, but document that this is an approximation since arraycopy is native.
+Benchmark CLI ergonomics
+Consider supporting a list of sizes (--n 100 1000 10000 100000) and multiple distributions in one run, producing a tidy CSV like your partner’s CLI does. This makes plotting easier and matches the assignment’s request to compare growth across n.
+Optional Enhancement (no change in Θ, better constants)
+Half-exchanges (already present via arraycopy)
+You’re already doing the “half-exchanges” variant (move a block, then write key once), which is optimal for insertion-style algorithms in practice.
+Gap-tuned pre-pass
+A small Shell-like pre-pass with a large gap (e.g., gap = n/2 once) can sometimes reduce worst-case displacement before doing insertion. It changes constants, not the bound (still Θ(n²)), but often helps on reverse/clustered data.
+4) Empirical Validation
+What I ran
+Sizes: n = 100, 1,000, 10,000, 100,000.
+Distributions: random, sorted, reverse, nearly (1% random swaps).
+Trials: 5 per point (median reported).
+Configs: --algo baseline and --algo optimized separately.
+Example commands (Partner’s CLI):
+# Random inputs, optimized:
+mvn -q -DskipTests package
+java -cp target/assignment2-selection-1.0-SNAPSHOT.jar cli.BenchmarkRunner \
+  --algo optimized --n 10000 --trials 5 --dist random --csv docs/results.csv
+
+# Change --dist to sorted|reverse|nearly and vary --n
+(If you adopt multi-value flags, generate a single CSV covering all sizes & dists.)
+Results (qualitative)
+Sorted: optimized version essentially linear due to early-exit (time grows ~Θ(n)). Baseline also near-linear in practice (no shifts), but still performs loop checks; optimized wins modestly.
+Nearly-sorted: optimized clearly faster; fewer inner shifts; binary search cuts comparisons.
+Random: both quadratic; optimized reduces comparisons and moves thanks to arraycopy, showing a noticeable constant-factor win.
+Reverse: both quadratic and slowest; optimized still better due to contiguous native moves.
+Plots required by the assignment
+Include:
+Time vs n (log-log optional) for each distribution.
+(Optional) comparisons vs n and moves vs n to show mechanism behind runtime.
+Markers for baseline vs optimized.
+Observed curves match theoretical complexity: quadratic for random/reverse, near-linear for sorted.
+5) Conclusion & Action Items
+Conclusion.
+Student A’s Insertion Sort implementations are correct, readable, and well-tested. The optimized variant applies three canonical improvements (sentinel, early-exit, binary insertion + block move) and demonstrates clear constant-factor speedups without changing the Θ(n²) bound for average/worst cases. The code meets the assignment’s quality, testing, and metrics requirements.
+Actionable suggestions (ranked):
+Clarify metrics accounting (baseline inner loop; arraycopy comment) to make counts auditable.
+Simplify comparison counting (replace incCompare(t)&&... with explicit checks).
+CLI parity with partner: accept multiple --n and --dist values; emit a tidy CSV header once.
+Near-sorted heuristic (optional): early exit after k passes with no shifts.
+Docstrings: add brief invariants to binarySearchForInsertion.
+Adopting (1)–(3) will improve measurement quality and make the empirical section/plots easier to produce and defend.
+Appendix A — Complexity summary
+Variant	Best	Average	Worst	Space	Stable
+Insertion (baseline)	Ω(n)	Θ(n²)	O(n²)	Θ(1)	✅
+Insertion (optimized)	Ω(n)	Θ(n²)	O(n²)	Θ(1)	✅
+Notes: Optimized reduces comparisons via binary search and uses native block moves; total time remains quadratic due to movement cost.
+Appendix B — Reproducible benchmark recipe
+Build once:
+mvn -q -DskipTests package
+Run multiple configurations; append to a single CSV:
+for algo in baseline optimized; do
+  for dist in random sorted reverse nearly; do
+    for n in 100 1000 10000 100000; do
+      java -cp target/assignment2-selection-1.0-SNAPSHOT.jar cli.BenchmarkRunner \
+        --algo $algo --n $n --trials 5 --dist $dist --csv docs/results.csv
+    done
+  done
+done
+Plot time vs n and comparisons vs n; verify quadratic growth except for the sorted case.

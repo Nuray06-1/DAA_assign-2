@@ -1,0 +1,23 @@
+# Maven
+/target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# MacOS
+.DS_Store
+
+# Logs
+*.log
+
+# CSV outputs
+docs/performance-plots/*.csv
