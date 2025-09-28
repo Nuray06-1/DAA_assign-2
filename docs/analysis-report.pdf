@@ -1,0 +1,80 @@
+1. Algorithm Overview 
+The partner implemented Insertion Sort, both in its baseline and optimized forms.
+Baseline Insertion Sort works by repeatedly inserting the current element into its correct position within the sorted prefix. It is stable, in-place, and simple, but quadratic in time.
+Optimized Insertion Sort includes several improvements:
+1.	Binary search to locate the insertion point faster.
+2.	Sentinel technique (placing the minimum element at the beginning) to avoid boundary checks.
+3.	Early exit if the array is already sorted.
+4.	Block moves (System.arraycopy) instead of shifting elements one by one.
+These optimizations significantly improve performance on sorted or nearly-sorted data, while preserving O(n²) worst-case complexity.
+
+2. Complexity Analysis
+Time Complexity:
+Best case (sorted input):
+1.	Baseline: still performs comparisons, O(n).
+2.	Optimized: detects sorted order early, O(n).
+Average case (random input):
+1.	Baseline: O(n²).
+2.	Optimized: Binary search reduces insertion position finding to O(log n), but shifting elements dominates, so still O(n²).
+Worst case (reverse input):
+Both baseline and optimized perform maximum shifts, O(n²).
+Space Complexity:
+Both versions are in-place, O(1) auxiliary memory.
+Comparison with my Selection Sort:
+1.	Selection Sort always does O(n²) comparisons, but only up to n swaps.
+2.	Insertion Sort may do fewer comparisons on sorted/near-sorted arrays, but potentially many element shifts.
+3.	For random data, both are quadratic, but Insertion Sort is usually faster in practice due to better cache behavior.
+4.	For large n, both are impractical compared to O(n log n) algorithms.
+
+3. Code Review & Optimization
+Strengths in partner’s code:
+1.	Clear separation between baseline and optimized versions.
+2.	Binary search helper used to reduce unnecessary comparisons.
+3.	Sentinel placement removes redundant checks.
+4.	Early-exit check avoids unnecessary passes.
+5.	Metrics collection (comparisons, moves, array accesses, memory usage) is integrated.
+6.	Unit tests validate correctness and stability.
+Weaknesses / Bottlenecks:
+1.	The optimized code still has quadratic element shifting. Even though System.arraycopy is efficient, it does not change asymptotic behavior.
+2.	Binary search improves comparisons, but cost is dominated by shifts.
+3.	Code readability could be improved by splitting responsibilities into smaller methods (e.g., extracting binary search logic).
+Suggestions:
+1.	Introduce a hybrid approach: switch to Merge Sort or Shell Sort when input size exceeds a threshold.
+2.	Apply adaptive strategy: detect if the array is nearly sorted → use optimized Insertion; otherwise, fallback to O(n log n) sort.
+3.	Consider making the algorithm generic (Comparable<T>) instead of int[].
+
+4. Empirical Results
+Benchmarks were run with input sizes n = 100, 1000, 10000, 100000 on four distributions: random, sorted, reverse, nearly-sorted.
+Findings:
+1.	Sorted arrays: Optimized version is nearly linear, far superior to baseline.
+2.	Nearly-sorted arrays: Optimized version reduces shifts dramatically.
+3.	Random arrays: Both remain quadratic; optimized version saves some comparisons but runtime still grows ~n².
+4.	Reverse arrays: Worst case for both, with maximum shifts.
+Validation:
+1.	Time vs n plots confirm quadratic growth.
+2.	Time vs n² plots are nearly linear, proving Θ(n²).
+3.	Optimizations lower constant factors but not asymptotic complexity.
+Comparison with Selection Sort:
+1.	Insertion Sort optimized performs better on sorted/near-sorted input, while Selection Sort remains quadratic.
+2.	Selection Sort performs fewer swaps but more comparisons.
+3.	Both are outperformed by O(n log n) sorts on large datasets.
+
+The experimental evaluation of the Insertion Sort algorithm confirms the theoretical analysis of its time and space complexity. Three key metrics were measured across different input sizes (n = 100, 1000, 10000, 100000) with random distributions: execution time, number of comparisons, and number of moves.
+
+1.	Execution Time (ms):
+The runtime grows quadratically with input size, as expected. For small inputs (n = 100), the execution time is negligible, while for large inputs (n = 100000), the runtime increases sharply to over 15 seconds on average. This matches the theoretical complexity of O(n²).
+2.	Comparisons:
+The number of comparisons also follows a quadratic trend, increasing from ~2,500 at n = 100 to nearly 2.5 billion at n = 100000. This validates the Θ(n²) bound on the number of comparisons.
+3.	Moves:
+The number of moves is almost identical to the number of comparisons, which is consistent with the structure of the insertion sort algorithm where each comparison typically results in a potential element shift.
+4.	Theory vs Practice:
+The plots show clear quadratic growth in all three metrics, perfectly aligning with the theoretical analysis. The difference between small and large input sizes demonstrates the impracticality of insertion sort for large datasets, while highlighting its efficiency for small or nearly-sorted inputs.
+5. Conclusion
+The partner’s Insertion Sort with optimizations demonstrates:
+1.	Excellent improvements for sorted and nearly sorted data.
+2.	Stable behavior with O(n²) worst-case complexity.
+3.	More efficient in practice than my Selection Sort, except that Selection Sort minimizes swaps.
+Optimization recommendations:
+1.	Hybridize with faster algorithms for large n.
+2.	Keep optimized insertion for small or nearly sorted datasets.
+3.	Maintain current optimizations, as they provide meaningful speedups without adding complexity.
